@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <numeric>
+#include <cmath>
 #include <fstream>
 
 namespace alfax {
@@ -71,6 +72,7 @@ void Master::Train() {
 		old_log_likelihood = new_log_likelihood;
 		iteration++;
 	}
+	ExportParams();
 	return;
 }
 
@@ -298,7 +300,14 @@ void Master::LoadECounts(const string &params_path,
 }
 
 double Master::LoadLL(const string &source_file) {
-	//TODO: implement
+
+	ifstream f;
+	f.open(source_file.c_str());
+	string content;
+	std::getline(f, content);
+	f.close();
+
+	return atof(content.c_str());
 }
 
 void Master::RandInitParams() {

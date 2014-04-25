@@ -187,7 +187,7 @@ int WorkGenerator::MakeJob(const vector<vector<Timeslice> > *data) {
 	//
 	sprintf(path, "templates/%s", out_template_file_);
 	return create_work(wu, in_template_, path, config.project_path(path),
-			infiles, 1, config);
+			infiles, 3, config);
 
 }
 
