@@ -27,11 +27,10 @@ public:
 
 	void ExportParams();
 
-	void LoadECounts(const string &params_path,
-			vector<vector<double> > *A_counts,
+	void LoadECounts(int timestamp, vector<vector<double> > *A_counts,
 			vector<vector<vector<double> > > *B_counts);
 
-	double LoadLL(const string &source_file);
+	double LoadLL(int timestamp);
 
 	void RandInitParams();
 

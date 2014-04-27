@@ -16,13 +16,19 @@
 #include <numeric>
 #include <cmath>
 #include <fstream>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 namespace alfax {
 
 // Reports whether the indicated output file is ready.
-// 'EStep_or_LL' is 0 for E-Step and 1 for LL
-bool OutputReady(int EStep_or_LL) {
-	//TODO: implement
+bool OutputReady(const char *file) {
+
+	char* path;
+	sprintf(path, "cons/%s", file);
+	struct stat st;
+	int result = stat(path, &st);
+	return result == 0;
 }
 
 Master::Master(const string &config_file) {
@@ -84,10 +90,10 @@ void Master::DistributeE() {
 	// Generates file with latest global params for clients to use
 	ExportParams();	// Export to working directory.
 
-	//TODO: need to specify these
+	int ts = time(0);
 	WorkGenerator *wg = new WorkGenerator("HMM_EM",
-			"<input file template path>", "<output file template path>",
-			time(0), ceil((1.0 * data_.size()) / DATA_POINTS_PER_SHARD));
+			"both_in", "estep_out",
+			ts, ceil((1.0 * data_.size()) / DATA_POINTS_PER_SHARD));
 
 	// Iterate through data splits and generate jobs
 	// to compute partial expected counts.
@@ -112,11 +118,17 @@ void Master::DistributeE() {
 	}
 
 	// Wait for clients to complete
-	while (!OutputReady(0)) {
+	char* fn;
+	sprintf(fn, "trans_%d", ts);
+	while (!OutputReady(fn)) {
+		sleep(100);
+	}
+	sprintf(fn, "emi_%d", ts);
+	while (!OutputReady(fn)) {
 		sleep(100);
 	}
 	// Get results
-	LoadECounts("<path to files>", &A_counts_, &B_counts_);	//TODO: need to specify file path
+	LoadECounts(ts, &A_counts_, &B_counts_);
 
 }
 
@@ -159,10 +171,11 @@ double Master::DistributeLL() {
 	// Generates file with latest global params for clients to use
 	ExportParams();	// Export to working directory.
 
-	//TODO: need to specify these
+	int ts = time(0);
+
 	WorkGenerator *wg = new WorkGenerator("HMM_EM",
-			"<input file template path>", "<output file template path>",
-			time(0), ceil((1.0 * data_.size()) / DATA_POINTS_PER_SHARD));
+			"both_in", "loglike_out",
+			ts, ceil((1.0 * data_.size()) / DATA_POINTS_PER_SHARD));
 
 	// Iterate through LL_clients and send them requests
 	// to compute partial loglikelihoods.
@@ -187,12 +200,13 @@ double Master::DistributeLL() {
 	}
 
 	// Wait for clients to complete
-	while (!OutputReady(1)) {
+	char* fn;
+	sprintf(fn, "loglike_%d", ts);
+	while (!OutputReady(fn)) {
 		sleep(100);
 	}
-
 	// Get results
-	return LoadLL("<path to file>"); //TODO: need to specify
+	return LoadLL(ts);
 
 }
 
@@ -226,19 +240,17 @@ void Master::ExportParams() {
 	output_file.close();
 }
 
-void Master::LoadECounts(const string &params_path,
-		vector<vector<double> > *A_counts,
+void Master::LoadECounts(int timestamp, vector<vector<double> > *A_counts,
 		vector<vector<vector<double> > > *B_counts) {
 
-	string bar = "";
-	if (params_path.substr(params_path.length() - 1, 1).compare("/") != 0)
-		bar = "/";
-	string transitions_path = params_path + bar + "transitions.txt";
-	string emissions_path = params_path + bar + "emissions.txt";
+	char* transitions_path;
+	sprintf(transitions_path, "cons/trans_%d", timestamp);
+	char* emissions_path;
+	sprintf(emissions_path, "cons/emi_%d", timestamp);
 	string line;
 
 	ifstream params_file;
-	params_file.open(transitions_path.c_str());	// First read transition matrix
+	params_file.open(transitions_path);	// First read transition matrix
 
 	int N = 0;
 	int start = 0;
@@ -270,7 +282,7 @@ void Master::LoadECounts(const string &params_path,
 	}
 	params_file.close();
 
-	params_file.open(emissions_path.c_str());// Next read the emissions matrix
+	params_file.open(emissions_path);// Next read the emissions matrix
 
 	B_counts->resize(N);
 	row = 1;
@@ -299,10 +311,12 @@ void Master::LoadECounts(const string &params_path,
 	}
 }
 
-double Master::LoadLL(const string &source_file) {
+double Master::LoadLL(int timestamp) {
 
+	char* file;
+	sprintf(file, "cons/loglike_%d", timestamp);
 	ifstream f;
-	f.open(source_file.c_str());
+	f.open(file);
 	string content;
 	std::getline(f, content);
 	f.close();

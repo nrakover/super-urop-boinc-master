@@ -44,6 +44,7 @@ int main(int argc, char **argv) {
 
 	/* Open any logs here */
 	//TODO: open logs
+
 	/* Create a new SID for the child process */
 	sid = setsid();
 	if (sid < 0) {
@@ -53,7 +54,7 @@ int main(int argc, char **argv) {
 
 	/* Change the current working directory */
 	//TODO: need the working directory to be the project directory
-	if ((chdir("/home/boincadm/projects/nicotest/bin")) < 0) {
+	if ((chdir("/home/boincadm/projects/full")) < 0) {
 		/* Log the failure */
 		exit(EXIT_FAILURE);
 	}
