@@ -92,7 +92,7 @@ void Master::DistributeE() {
 
 	int ts = time(0);
 	WorkGenerator *wg = new WorkGenerator("HMM_EM",
-			"both_in", "estep_out",
+			"estep_in", "estep_out",
 			ts, ceil((1.0 * data_.size()) / DATA_POINTS_PER_SHARD));
 
 	// Iterate through data splits and generate jobs
@@ -174,7 +174,7 @@ double Master::DistributeLL() {
 	int ts = time(0);
 
 	WorkGenerator *wg = new WorkGenerator("HMM_EM",
-			"both_in", "loglike_out",
+			"loglike_in", "loglike_out",
 			ts, ceil((1.0 * data_.size()) / DATA_POINTS_PER_SHARD));
 
 	// Iterate through LL_clients and send them requests
