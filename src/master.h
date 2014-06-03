@@ -6,6 +6,7 @@
  */
 
 #include <vector>
+#include <string>
 #include "timeslice.h"
 
 #ifndef MASTER_H_

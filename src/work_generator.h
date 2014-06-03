@@ -9,7 +9,10 @@
 #define WORK_GENERATOR_H_
 
 #include <vector>
+#include <string>
 #include "boinc_db.h"
+#include "sched_config.h"
+
 #include "timeslice.h"
 
 namespace alfax {
@@ -24,12 +27,13 @@ public:
 	int seq_num_;
 	const int total_shards_;
 	const int timestamp_;
-	const char* app_name_;
-	const char* in_template_file_;
-	const char* out_template_file_;
+	const string app_name_;
+	const string in_template_file_;
+	const string out_template_file_;
 
-	char* in_template_;
+	string in_template_;
 	DB_APP app_;
+	SCHED_CONFIG config_;
 
 };
 

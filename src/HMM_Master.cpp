@@ -17,9 +17,12 @@
 #include <string.h>
 #include <iostream>
 
+#include "boinc_api.h"
+
 #include "master.h"
 
 int main(int argc, char **argv) {
+
 
 	// we need the config file
 	if (argc != 2)
@@ -61,17 +64,21 @@ int main(int argc, char **argv) {
 
 	/* Close out the standard file descriptors */
 	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	close(STDERR_FILENO);
+//	close(STDOUT_FILENO);
+//	close(STDERR_FILENO);
 
 
+	cout << "[MASTER] Finished daemonization." << endl;
 
 	/* The next to lines initialize the master code and off we go */
 	string config_file = argv[1];
 	alfax::Master *master = new alfax::Master::Master(config_file);
+
+	cout << "[MASTER] Initialized Master object." << endl;
+
 	master->Train();
 
-
+	cout << "[MASTER] Done." << endl;
 
 	exit(EXIT_SUCCESS);
 }

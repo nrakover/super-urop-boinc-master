@@ -11,6 +11,7 @@
 #include <fstream>
 #include <vector>
 #include <numeric>
+#include <cstdlib>
 
 using namespace std;
 

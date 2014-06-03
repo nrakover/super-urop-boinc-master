@@ -24,7 +24,7 @@ namespace alfax {
 // Reports whether the indicated output file is ready.
 bool OutputReady(const char *file) {
 
-	char* path;
+	char path[256];
 	sprintf(path, "cons/%s", file);
 	struct stat st;
 	int result = stat(path, &st);
@@ -86,14 +86,19 @@ void Master::Train() {
 void Master::DistributeE() {
 
 	const int DATA_POINTS_PER_SHARD = 500;
+	int retval;
 
 	// Generates file with latest global params for clients to use
 	ExportParams();	// Export to working directory.
+
+	cout << "[MASTER] Initializing WorkGenerator." << endl;
 
 	int ts = time(0);
 	WorkGenerator *wg = new WorkGenerator("HMM_EM",
 			"estep_in", "estep_out",
 			ts, ceil((1.0 * data_.size()) / DATA_POINTS_PER_SHARD));
+
+	cout << "[MASTER] WorkGenerator initialized." << endl;
 
 	// Iterate through data splits and generate jobs
 	// to compute partial expected counts.
@@ -105,7 +110,12 @@ void Master::DistributeE() {
 		for (int i = 0; i < DATA_POINTS_PER_SHARD; i++) {
 			data_shard.at(i) = data_.at(split * DATA_POINTS_PER_SHARD + i);
 		}
-		wg->MakeJob(&data_shard);
+		retval = wg->MakeJob(&data_shard);
+		if (retval) {
+			cerr << "[MASTER] error in MakeJob(): error code " << retval
+					<< endl;
+			exit(retval);
+		}
 
 	}
 	int leftover = data_.size() - num_splits * DATA_POINTS_PER_SHARD;
@@ -114,17 +124,26 @@ void Master::DistributeE() {
 		for (int i = 0; i < leftover; i++) {
 			data_shard.at(i) = data_.at(num_splits * DATA_POINTS_PER_SHARD + i);
 		}
-		wg->MakeJob(&data_shard);
+		retval = wg->MakeJob(&data_shard);
+		if (retval) {
+			cerr << "[MASTER] error in MakeJob(): error code " << retval
+					<< endl;
+			exit(retval);
+		}
 	}
 
+	cout << "[MASTER] Estep work units generated." << endl;
+
 	// Wait for clients to complete
-	char* fn;
+	char fn[256];
 	sprintf(fn, "trans_%d", ts);
 	while (!OutputReady(fn)) {
+		cout << "[MASTER] waiting on trans results" << endl;
 		sleep(100);
 	}
 	sprintf(fn, "emi_%d", ts);
 	while (!OutputReady(fn)) {
+		cout << "[MASTER] waiting on emi results" << endl;
 		sleep(100);
 	}
 	// Get results
@@ -167,15 +186,19 @@ void Master::M() {
 double Master::DistributeLL() {
 
 	const int DATA_POINTS_PER_SHARD = 500;
+	int retval;
 
 	// Generates file with latest global params for clients to use
 	ExportParams();	// Export to working directory.
 
-	int ts = time(0);
+	cout << "[MASTER] Initializing WorkGenerator." << endl;
 
+	int ts = time(0);
 	WorkGenerator *wg = new WorkGenerator("HMM_EM",
 			"loglike_in", "loglike_out",
 			ts, ceil((1.0 * data_.size()) / DATA_POINTS_PER_SHARD));
+
+	cout << "[MASTER] WorkGenerator initialized." << endl;
 
 	// Iterate through LL_clients and send them requests
 	// to compute partial loglikelihoods.
@@ -187,7 +210,12 @@ double Master::DistributeLL() {
 		for (int i = 0; i < DATA_POINTS_PER_SHARD; i++) {
 			data_shard.at(i) = data_.at(split * DATA_POINTS_PER_SHARD + i);
 		}
-		wg->MakeJob(&data_shard);
+		retval = wg->MakeJob(&data_shard);
+		if (retval) {
+			cerr << "[MASTER] error in MakeJob(): error code " << retval
+					<< endl;
+			exit(retval);
+		}
 
 	}
 	int leftover = data_.size() - num_splits * DATA_POINTS_PER_SHARD;
@@ -196,13 +224,21 @@ double Master::DistributeLL() {
 		for (int i = 0; i < leftover; i++) {
 			data_shard.at(i) = data_.at(num_splits * DATA_POINTS_PER_SHARD + i);
 		}
-		wg->MakeJob(&data_shard);
+		retval = wg->MakeJob(&data_shard);
+		if (retval) {
+			cerr << "[MASTER] error in MakeJob(): error code " << retval
+					<< endl;
+			exit(retval);
+		}
 	}
 
+	cout << "[MASTER] LL work units generated." << endl;
+
 	// Wait for clients to complete
-	char* fn;
+	char fn[256];
 	sprintf(fn, "loglike_%d", ts);
 	while (!OutputReady(fn)) {
+		cout << "[MASTER] waiting on LL results" << endl;
 		sleep(100);
 	}
 	// Get results
@@ -243,9 +279,9 @@ void Master::ExportParams() {
 void Master::LoadECounts(int timestamp, vector<vector<double> > *A_counts,
 		vector<vector<vector<double> > > *B_counts) {
 
-	char* transitions_path;
+	char transitions_path[256];
 	sprintf(transitions_path, "cons/trans_%d", timestamp);
-	char* emissions_path;
+	char emissions_path[256];
 	sprintf(emissions_path, "cons/emi_%d", timestamp);
 	string line;
 
@@ -313,7 +349,7 @@ void Master::LoadECounts(int timestamp, vector<vector<double> > *A_counts,
 
 double Master::LoadLL(int timestamp) {
 
-	char* file;
+	char file[256];
 	sprintf(file, "cons/loglike_%d", timestamp);
 	ifstream f;
 	f.open(file);
